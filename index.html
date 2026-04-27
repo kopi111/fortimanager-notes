@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FortiManager 7.6 — Study Notes</title>
+<meta name="description" content="Personal study notes for FortiManager 7.6 administration concepts.">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --border: #232a38;
+    --text: #e7ecf3;
+    --muted: #97a3b6;
+    --accent: #ee3024;
+    --accent-soft: #ee30241a;
+    --code-bg: #0b0e14;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafbfc;
+      --panel: #ffffff;
+      --border: #e3e7ee;
+      --text: #1a1f2b;
+      --muted: #5a6478;
+      --code-bg: #f3f5f9;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 24px;
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    backdrop-filter: blur(8px);
+  }
+  header .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+  }
+  header h1 .accent { color: var(--accent); }
+  .search {
+    flex: 1 1 260px;
+    max-width: 360px;
+  }
+  .search input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+  .search input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .intro {
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  nav.toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+  }
+  nav.toc strong {
+    display: block;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  nav.toc ol {
+    margin: 0;
+    padding-left: 22px;
+  }
+  nav.toc a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  section.topic {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+  }
+  section.topic h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+  }
+  section.topic h2::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  section.topic p { margin: 0 0 10px; }
+  section.topic ul { margin: 0 0 12px 0; padding-left: 22px; }
+  section.topic li { margin-bottom: 4px; }
+  section.topic.is-hidden { display: none; }
+  code, kbd, pre {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13.5px;
+  }
+  code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  pre code { background: transparent; border: 0; padding: 0; }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-right: 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--code-bg); font-weight: 600; }
+  footer {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 32px 16px 48px;
+  }
+  footer a { color: var(--muted); }
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 24px;
+    font-style: italic;
+    display: none;
+  }
+  .empty.show { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1><span class="accent">●</span> FortiManager 7.6 — Study Notes</h1>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search topics, terms, commands…" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="intro">
+    Personal notes from the official <em>FortiManager 7.6 Administrator</em>
+    course material. Concepts only — paraphrased in my own words for revision.
+    Use the search box to filter topics live.
+  </p>
+
+  <nav class="toc" aria-label="Table of contents">
+    <strong>Topics</strong>
+    <ol>
+      <li><a href="#what">What FortiManager Is</a></li>
+      <li><a href="#inside">Inside FortiManager — Modules &amp; Panes</a></li>
+      <li><a href="#adoms">Administrative Domains (ADOMs)</a></li>
+      <li><a href="#faz">FortiAnalyzer Integration</a></li>
+      <li><a href="#init">Initial Configuration &amp; Ports</a></li>
+      <li><a href="#wizard">First-Login Setup Wizard</a></li>
+      <li><a href="#admins">Administrator Accounts &amp; Profiles</a></li>
+      <li><a href="#concurrency">Concurrent Admins — Workspace &amp; Workflow</a></li>
+      <li><a href="#adom-best">ADOM Best Practices</a></li>
+      <li><a href="#backup">Backup, Restore, Migration, Offline Mode</a></li>
+      <li><a href="#templates">Provisioning Templates &amp; Mass Provisioning</a></li>
+      <li><a href="#revisions">Revision History &amp; ADOM Revisions</a></li>
+      <li><a href="#dbs">Two Databases — ADOM-level vs Device-level</a></li>
+      <li><a href="#scripts">Scripting Targets</a></li>
+      <li><a href="#nat">FortiManager Behind NAT</a></li>
+    </ol>
+  </nav>
+
+  <section class="topic" id="what">
+    <h2>What FortiManager Is</h2>
+    <p>
+      A centralized management plane for Fortinet devices. Instead of logging
+      into hundreds of FortiGates one by one, you point them at a FortiManager
+      and operate them from a single console.
+    </p>
+    <p>Core capabilities I keep coming back to:</p>
+    <ul>
+      <li>Centralized policy and object provisioning across many devices</li>
+      <li>Configuration revision control (snapshots and reverts)</li>
+      <li>Local FortiGuard distribution (private FDS) for closed networks</li>
+      <li>Firmware management for managed devices</li>
+      <li>Mesh / star IPsec VPN deployment</li>
+      <li>Logging and reporting (with FortiAnalyzer features or a dedicated FortiAnalyzer)</li>
+      <li>Management Extension Apps (MEAs) — licensed apps that run as containers on FortiManager</li>
+    </ul>
+  </section>
+
+  <section class="topic" id="inside">
+    <h2>Inside FortiManager — Modules &amp; Panes</h2>
+    <p>
+      The web GUI is organized into panes that map to modules under the hood.
+      The default ones I use most:
+    </p>
+    <ul>
+      <li><strong>Device Manager</strong> — add/authorize devices, edit device DB, run installs</li>
+      <li><strong>Policy &amp; Objects</strong> — central firewall policies, profiles, addresses, schedules</li>
+      <li><strong>VPN Manager</strong> — IPsec / SSL VPN central config</li>
+      <li><strong>AP Manager / FortiSwitch Manager / Extender Manager</strong> — manage devices controlled by FortiGates</li>
+      <li><strong>Fabric View</strong> — Security Fabric ratings &amp; connectors</li>
+      <li><strong>FortiGuard</strong> — local FDS / signature distribution</li>
+      <li><strong>System Settings</strong> — admins, ADOMs, HA, network, advanced</li>
+    </ul>
+    <p>
+      Optional panes appear when FortiAnalyzer features are enabled or when a
+      FortiAnalyzer is added: <strong>FortiView</strong>, <strong>Log View</strong>,
+      <strong>Incidents &amp; Events</strong>, <strong>Reports</strong>.
+    </p>
+  </section>
+
+  <section class="topic" id="adoms">
+    <h2>Administrative Domains (ADOMs)</h2>
+    <p>
+      ADOMs let you logically group devices and scope administrators to those
+      groups. A device belongs to one ADOM; an admin can be tied to one or more
+      ADOMs.
+    </p>
+    <table>
+      <thead><tr><th>ADOM device mode</th><th>Behavior</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Normal</strong></td><td>The whole FortiGate (all VDOMs) lives in one ADOM.</td></tr>
+        <tr><td><strong>Advanced</strong></td><td>Each VDOM can be assigned to a different ADOM.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Accounts with the <code>Super_User</code> profile (e.g. the default
+      <code>admin</code>) can manage every ADOM. Other profiles are scoped.
+    </p>
+  </section>
+
+  <section class="topic" id="faz">
+    <h2>FortiAnalyzer Integration</h2>
+    <p>Two ways to handle logs from managed devices:</p>
+    <ul>
+      <li>
+        <strong>Add FortiAnalyzer to FortiManager</strong> — recommended for
+        production / high log volume. FortiAnalyzer stores logs; FortiManager
+        gets read access to its panes. <em>Caveat:</em> can&rsquo;t enable
+        advanced ADOM mode while a FortiAnalyzer is attached.
+      </li>
+      <li>
+        <strong>Enable FortiAnalyzer features manually on FortiManager</strong>
+        — turns FortiManager itself into the log/report device. Capped at
+        ~150 logs/sec, license is non-stackable, and FortiManager HA is
+        unsupported in that mode. Fine for labs, not for real volume.
+      </li>
+    </ul>
+  </section>
+
+  <section class="topic" id="init">
+    <h2>Initial Configuration &amp; Ports</h2>
+    <p>Factory defaults to know:</p>
+    <ul>
+      <li>Management interface: <code>port1</code> at <code>192.168.1.99/24</code></li>
+      <li>HTTPS and SSH enabled by default</li>
+      <li>Username <code>admin</code>, blank password (forced change on first login)</li>
+    </ul>
+    <p>Key TCP/UDP ports (for firewall planning when FortiManager is behind a perimeter):</p>
+    <table>
+      <thead><tr><th>Direction</th><th>Purpose</th><th>Ports</th></tr></thead>
+      <tbody>
+        <tr><td>In/Out</td><td>FGFM (management to FortiGates)</td><td>TCP 541 (IPv4), TCP 542 (IPv6)</td></tr>
+        <tr><td>In</td><td>HTTPS / HTTP / SSH GUI &amp; CLI</td><td>TCP 443 / 80 / 22</td></tr>
+        <tr><td>In</td><td>Web filter, AV, IPS updates (when acting as local FDS)</td><td>UDP 53, UDP/TCP 8888, TCP 80</td></tr>
+        <tr><td>Out</td><td>AV/IPS push updates</td><td>UDP 9443</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Security baseline: deploy behind a firewall, use HTTPS / SSH only,
+      configure trusted hosts to limit login source IPs, enable a password
+      policy, and watch the event log.
+    </p>
+  </section>
+
+  <section class="topic" id="wizard">
+    <h2>First-Login Setup Wizard</h2>
+    <p>On first login, the FortiManager Setup wizard runs through:</p>
+    <ol>
+      <li>Register with FortiCare and enable SSO (or import an entitlement file in a closed network)</li>
+      <li>Set the hostname</li>
+      <li>Change the admin password</li>
+      <li>Optionally upgrade firmware</li>
+    </ol>
+    <p>The wizard stops appearing once you complete it.</p>
+  </section>
+
+  <section class="topic" id="admins">
+    <h2>Administrator Accounts &amp; Profiles</h2>
+    <p>Two profile types:</p>
+    <ul>
+      <li>
+        <strong>System Admin</strong> — full granularity. Choose Read-Write,
+        Read-Only, or None for each module (System Settings, FortiGuard,
+        Device Manager, etc.).
+      </li>
+      <li>
+        <strong>Restricted Admin</strong> — scoped to a small set of security
+        profiles per ADOM (web filter, IPS sensors, application sensors).
+        Useful for delegating tuning without giving structural access.
+      </li>
+    </ul>
+    <p>
+      Access can be controlled by combining <strong>ADOMs</strong> (which
+      devices an admin can see), the <strong>profile</strong> (what they can
+      do), and <strong>trusted hosts</strong> (which IPs they can log in from).
+      External authentication is supported via LDAP, RADIUS, TACACS+, and PKI,
+      with optional 2FA via FortiAuthenticator / FortiToken Cloud.
+    </p>
+  </section>
+
+  <section class="topic" id="concurrency">
+    <h2>Concurrent Admins — Workspace &amp; Workflow</h2>
+    <p>
+      By default <code>workspace-mode</code> is <code>disabled</code>: multiple
+      admins can edit the same ADOM at the same time and step on each other.
+      The fix is a locking mode.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Mode</th><th>CLI value</th><th>What it adds</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Disabled</td><td><code>disabled</code></td><td>No locks (default).</td></tr>
+        <tr><td>Workspace (ALL ADOMs)</td><td><code>normal</code></td><td>Locking on every ADOM.</td></tr>
+        <tr><td>Workspace (Per-ADOM)</td><td><code>per-adom</code></td><td>Locking only on chosen ADOMs.</td></tr>
+        <tr><td>Workflow (ALL ADOMs)</td><td><code>workflow</code></td><td>Locking + an approval pipeline before installation.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Locks can be taken at multiple levels: ADOM, device, policy package,
+      object, or — with <strong>Per-Policy Lock</strong> — individual policies.
+      Lock icons in the GUI: open (unlocked), green closed (locked by you),
+      red closed (locked by another admin).
+    </p>
+    <p>
+      <strong>Workflow mode</strong> is the right choice when changes must be
+      reviewed and approved before being applied — e.g. environments with
+      change-control or segregation-of-duties requirements.
+    </p>
+  </section>
+
+  <section class="topic" id="adom-best">
+    <h2>ADOM Best Practices</h2>
+    <ul>
+      <li>Group devices by <strong>FortiOS firmware version</strong> first — command syntax varies between versions, and one-ADOM-per-firmware avoids script and template surprises.</li>
+      <li>Other axes to layer on: assigned admin team, geographic region, customer (MSSP), or environment (prod / dev / test).</li>
+      <li>An ADOM&rsquo;s version determines which device firmware versions it can manage — check the support matrix before planning upgrades.</li>
+      <li>Upgrade managed devices first, then upgrade the ADOM (or, if you upgrade the ADOM first, install pending changes and check the install preview after).</li>
+      <li><strong>FortiManager firmware upgrades do not auto-upgrade ADOMs.</strong> The ADOM upgrade is a separate manual step.</li>
+      <li>Many stale ADOM revisions slow upgrades — prune within retention policy before kicking one off.</li>
+      <li>Moving a device to a new ADOM doesn&rsquo;t carry its policy package or shared objects — re-import them.</li>
+    </ul>
+  </section>
+
+  <section class="topic" id="backup">
+    <h2>Backup, Restore, Migration, Offline Mode</h2>
+    <p>The backup contains everything <em>except</em> logs, FortiGuard cache, and saved firmware images:</p>
+    <ul>
+      <li>All managed devices</li>
+      <li>Global database</li>
+      <li>Flash configuration</li>
+    </ul>
+    <p>
+      Backups can run on demand or on a schedule, over FTP / SCP / SFTP, with
+      optional password encryption. Restores reboot FortiManager.
+    </p>
+    <h3 style="font-size:15px;margin-top:14px;">Restore options</h3>
+    <ul>
+      <li><strong>Overwrite current IP, routing, and HA</strong> — on by default; turn off if you&rsquo;re restoring on the same box and want to keep its current network identity.</li>
+      <li><strong>Restore in offline mode</strong> — always on; FortiManager comes back up with FGFM disabled so it can&rsquo;t collide with another active manager during the restore.</li>
+    </ul>
+    <h3 style="font-size:15px;margin-top:14px;">Migrating to a different model</h3>
+    <pre><code>execute migrate all-settings &lt; ftp | scp | sftp &gt; &lt;server&gt; &lt;filepath&gt; &lt;user&gt; &lt;password&gt; [cryptpasswd]</code></pre>
+    <p>
+      Backs up on model A, restores on model B. Useful for hardware swaps or
+      moving up to a larger appliance. FortiGuard databases (AV, IPS, etc.)
+      aren&rsquo;t inside the config and need to be re-pulled.
+    </p>
+    <h3 style="font-size:15px;margin-top:14px;">Offline mode</h3>
+    <p>
+      Disabled by default. Toggling it on disables the FGFM protocol so
+      FortiManager won&rsquo;t talk to managed devices. Used for safe
+      troubleshooting, lab cloning, or restoring a backup on a second
+      FortiManager without it fighting the live one.
+    </p>
+    <h3 style="font-size:15px;margin-top:14px;">Reset</h3>
+    <pre><code>execute reset all-settings        # full factory reset
+execute reset all-except-ip       # reset, keep IP/routing
+execute format disk ...           # erase databases &amp; logs, repartition</code></pre>
+  </section>
+
+  <section class="topic" id="templates">
+    <h2>Provisioning Templates &amp; Mass Provisioning</h2>
+    <p>
+      Templates are how FortiManager actually does mass provisioning — define
+      a setting once (CLI, system, IPsec, SD-WAN, BGP, certificate, etc.) and
+      assign it to many FortiGates. The template becomes the source of truth
+      for whatever it covers, so manual edits to the device DB outside the
+      template will be overwritten on the next push.
+    </p>
+    <p>
+      <strong>Normalized (dynamic) interfaces</strong> are the policy-layer
+      abstraction for interfaces — they let you write a policy once and map
+      <code>LAN</code> / <code>WAN</code> / etc. to whichever physical interface
+      a given FortiGate model actually has. Each device needs a per-device
+      mapping (or a per-platform mapping for a model family). A missing
+      mapping triggers <em>Dynamic interface mapping undefined</em> install
+      errors.
+    </p>
+  </section>
+
+  <section class="topic" id="revisions">
+    <h2>Revision History &amp; ADOM Revisions</h2>
+    <p>Two different revision concepts — easy to confuse:</p>
+    <table>
+      <thead><tr><th></th><th>Device revision history</th><th>ADOM revision</th></tr></thead>
+      <tbody>
+        <tr><td>Scope</td><td>One device&rsquo;s device-level DB</td><td>An ADOM&rsquo;s policy packages &amp; objects</td></tr>
+        <tr><td>Created when</td><td>FortiManager installs to the device, or auto-retrieves out-of-band changes</td><td>Manually, or via the Install Wizard&rsquo;s Policy &amp; Package Settings</td></tr>
+        <tr><td>Reverting it</td><td>Rewrites the device-level DB on FortiManager (no policy-layer effect)</td><td>Rewrites policy packages and objects in the ADOM</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Reverting a device revision <em>does not</em> reach the FortiGate on its
+      own — you still need to install for the change to land.
+    </p>
+  </section>
+
+  <section class="topic" id="dbs">
+    <h2>Two Databases — ADOM-level vs Device-level</h2>
+    <p>
+      Every managed FortiGate&rsquo;s configuration is split across two
+      databases on FortiManager. Knowing which side something lives on tells
+      you where to make the change and how to push it.
+    </p>
+    <table>
+      <thead><tr><th>ADOM-level (policy / objects)</th><th>Device-level</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            Firewall policies, security profiles (AV, IPS, web filter, app
+            control, DLP), address &amp; service objects, schedules,
+            normalized interfaces
+          </td>
+          <td>
+            Interfaces, routing (static, BGP, OSPF), DNS, SNMP, HA, DHCP,
+            NSX-T service template — anything tied to a specific device
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="topic" id="scripts">
+    <h2>Scripting Targets</h2>
+    <p>FortiManager scripts (CLI or Tcl) can run against three different targets:</p>
+    <ul>
+      <li><strong>Policy package database</strong> — accepts policy / object syntax only.</li>
+      <li><strong>Device database</strong> — accepts device-level CLI like <code>config system interface</code> or <code>config router bgp</code>.</li>
+      <li><strong>Remote FortiGate (via CLI)</strong> — runs the script live against the FortiGate&rsquo;s real CLI.</li>
+    </ul>
+    <p>
+      Pointing a script at the wrong target produces <em>object unrecognized</em>
+      errors. Device-level commands fail against the policy DB, and vice versa.
+    </p>
+  </section>
+
+  <section class="topic" id="nat">
+    <h2>FortiManager Behind NAT</h2>
+    <p>
+      When FortiManager sits behind a NAT firewall, the FortiGates it manages
+      can&rsquo;t reach its internal IP — they only see the public/VIP. The
+      <code>mgmt-addr</code> setting tells FortiManager which address to
+      advertise to managed FortiGates:
+    </p>
+    <pre><code>config system admin setting
+    set mgmt-addr 100.65.0.120   # the public/NATed IP
+end</code></pre>
+    <p>
+      During discovery, FortiGate is told to talk to this single address only.
+      The internal IP is never exposed. If both ends are behind NAT, both
+      sides need their own public address configuration so the FGFM tunnel
+      can be established and re-established when it drops.
+    </p>
+  </section>
+</main>
+
+<p class="empty" id="empty">No topics match your search.</p>
+
+<footer>
+  <div>Personal study notes · concepts only. Not affiliated with Fortinet.</div>
+  <div style="margin-top:6px;">
+    Source material: <em>FortiManager 7.6 Administrator</em> course
+    (<a href="https://training.fortinet.com" target="_blank" rel="noopener">training.fortinet.com</a>)
+  </div>
+</footer>
+
+<script>
+  const q = document.getElementById('q');
+  const sections = document.querySelectorAll('section.topic');
+  const empty = document.getElementById('empty');
+
+  q.addEventListener('input', () => {
+    const term = q.value.trim().toLowerCase();
+    let any = false;
+    sections.forEach(s => {
+      const hay = s.textContent.toLowerCase();
+      const match = !term || hay.includes(term);
+      s.classList.toggle('is-hidden', !match);
+      if (match) any = true;
+    });
+    empty.classList.toggle('show', !any);
+  });
+</script>
+</body>
+</html>
