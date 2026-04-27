@@ -226,6 +226,17 @@
       <li><a href="#dbs">Two Databases — ADOM-level vs Device-level</a></li>
       <li><a href="#scripts">Scripting Targets</a></li>
       <li><a href="#nat">FortiManager Behind NAT</a></li>
+      <li><a href="#ha">High Availability — Standalone &amp; VRRP</a></li>
+      <li><a href="#registration">Device Registration &amp; Model Devices</a></li>
+      <li><a href="#install">Install Wizard &amp; Install Preview</a></li>
+      <li><a href="#pkg-status">Policy Package Status Indicators</a></li>
+      <li><a href="#mappings">Per-Device &amp; Per-Platform Mappings</a></li>
+      <li><a href="#global">Global Database ADOM</a></li>
+      <li><a href="#integrity">Database Integrity &amp; Diagnose Commands</a></li>
+      <li><a href="#tokens">FortiTokens &amp; Per-Device Object State</a></li>
+      <li><a href="#backup-mode">Backup-Mode ADOMs</a></li>
+      <li><a href="#fmg-upgrade">FortiManager Firmware vs ADOM Upgrades</a></li>
+      <li><a href="#both-nat">Both Sides Behind NAT</a></li>
     </ol>
   </nav>
 
@@ -543,6 +554,278 @@ end</code></pre>
       The internal IP is never exposed. If both ends are behind NAT, both
       sides need their own public address configuration so the FGFM tunnel
       can be established and re-established when it drops.
+    </p>
+  </section>
+
+  <section class="topic" id="ha">
+    <h2>High Availability — Standalone &amp; VRRP</h2>
+    <p>
+      FortiManager HA is a 1+1 (active-passive) cluster. The primary serves
+      management traffic; secondaries hold a synced copy of the database and
+      take over on failure.
+    </p>
+    <table>
+      <thead><tr><th>Failover mode</th><th>Behavior</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Manual</strong></td>
+          <td>Failover is admin-initiated. The cluster doesn&rsquo;t promote a secondary on its own.</td>
+        </tr>
+        <tr>
+          <td><strong>VRRP</strong></td>
+          <td>The cluster shares a virtual IP. If the monitored interface on the primary fails, a secondary takes over the VIP automatically &mdash; transparent to admins and managed devices.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Cluster settings to know:</p>
+    <ul>
+      <li><strong>Cluster ID</strong> &mdash; identifies the cluster (1&ndash;64); both peers must match.</li>
+      <li><strong>Group password</strong> &mdash; shared secret for cluster heartbeat.</li>
+      <li><strong>Heartbeat interval</strong> and <strong>failover threshold</strong> &mdash; how aggressively the cluster declares the peer dead.</li>
+      <li><strong>VIP</strong> + <strong>VRRP interface</strong> &mdash; only used in VRRP mode.</li>
+      <li><strong>File quota</strong> &mdash; how much sync data the secondary will buffer.</li>
+    </ul>
+    <p>
+      In VRRP mode, no manual peer-IP edits are needed when a single
+      interface fails &mdash; the secondary just becomes primary and resumes
+      service on the VIP.
+    </p>
+  </section>
+
+  <section class="topic" id="registration">
+    <h2>Device Registration &amp; Model Devices</h2>
+    <p>Three common registration paths:</p>
+    <ul>
+      <li>
+        <strong>Add Device wizard</strong> &mdash; you give FortiManager an
+        IP and credentials, FortiManager pulls the existing config and
+        registers the device.
+      </li>
+      <li>
+        <strong>FortiGate-initiated</strong> &mdash; FortiGate is configured
+        with FortiManager&rsquo;s address (<code>set fmg</code>); the
+        FortiGate calls home and waits for authorization.
+      </li>
+      <li>
+        <strong>Model device</strong> &mdash; a placeholder created in
+        advance for a FortiGate that doesn&rsquo;t exist yet (zero-touch
+        provisioning). The model holds intended config so that when the
+        real unit comes online and is authorized, FortiManager pushes
+        everything down at once.
+      </li>
+    </ul>
+    <p>
+      A model device shows up in <code>diagnose dvm device list</code> as
+      <code>fmgfaz-model</code> with status like <code>conn:&nbsp;unknown</code>
+      and <code>pkg:&nbsp;[never-installed]</code>. Commands that require live
+      device communication (e.g. retrieving the running config) will fail
+      until the real FortiGate registers and connects.
+    </p>
+  </section>
+
+  <section class="topic" id="install">
+    <h2>Install Wizard &amp; Install Preview</h2>
+    <p>The Install Wizard pushes pending changes to managed devices. Two install scopes:</p>
+    <ul>
+      <li><strong>Install Policy Package &amp; Device Settings</strong> &mdash; the full thing: ADOM-level policies/objects + device-level changes.</li>
+      <li><strong>Install Device Settings (only)</strong> &mdash; only the device-level database (interfaces, routing, system config). Useful when you&rsquo;ve only touched device-level CLI and don&rsquo;t want to re-push the policy package.</li>
+    </ul>
+    <p>
+      Before the actual push, the wizard shows an <strong>Install
+      Preview</strong> &mdash; a CLI-style diff of what will be applied.
+      Worth scanning every time, especially after a firmware upgrade or a
+      template change. Common surprise lines:
+    </p>
+    <ul>
+      <li><code>config system central-management</code> with <code>set server-type update rating</code> &mdash; FortiGate is being told to use FortiManager as its FortiGuard rating/update source.</li>
+      <li><code>config vpn certificate ca</code> with a CA name &mdash; FortiManager is installing the CA used to authenticate the FGFM tunnel.</li>
+    </ul>
+    <p>
+      Atomicity: each <code>config</code> block must end with <code>end</code>.
+      A script-driven install that fails on a required attribute (e.g.
+      <code>ldap-server</code> missing) or a referenced object that
+      doesn&rsquo;t exist (e.g. an unknown user in a policy) aborts that
+      object &mdash; no partial install for that block.
+    </p>
+  </section>
+
+  <section class="topic" id="pkg-status">
+    <h2>Policy Package Status Indicators</h2>
+    <p>Each managed device has a policy-package status that tells you whether what&rsquo;s on the device matches what&rsquo;s in the ADOM:</p>
+    <table>
+      <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Synchronized</strong></td><td>Device matches the assigned ADOM policy package.</td></tr>
+        <tr><td><strong>Modified</strong></td><td>The ADOM has pending policy/object changes that haven&rsquo;t been installed.</td></tr>
+        <tr><td><strong>Out of Sync</strong></td><td>Direct edits on the FortiGate diverged from FortiManager&rsquo;s view.</td></tr>
+        <tr><td><strong>Unknown</strong></td><td>FortiManager hasn&rsquo;t been able to compare &mdash; often after a fresh import or device move.</td></tr>
+        <tr><td><strong>Never Installed</strong></td><td>A policy package exists in the ADOM but has never been pushed to this FortiGate.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      <em>Never Installed</em> is the one to watch for after creating a new
+      package or assigning a device a different package &mdash; the policies
+      live in the ADOM but haven&rsquo;t reached the device yet.
+    </p>
+  </section>
+
+  <section class="topic" id="mappings">
+    <h2>Per-Device &amp; Per-Platform Mappings</h2>
+    <p>
+      Normalized interfaces and address objects can take on different real
+      values per device. The mapping system has two flavors:
+    </p>
+    <ul>
+      <li>
+        <strong>Per-Device</strong> &mdash; the override applies to one
+        specific device/VDOM pair. Other devices/VDOMs fall back to the
+        base value.
+      </li>
+      <li>
+        <strong>Per-Platform</strong> &mdash; the override applies to every
+        device of a given model family (e.g. all FortiGate 40F units).
+        Useful when a model family uses a different interface name like
+        <code>lan1</code> instead of <code>port4</code>.
+      </li>
+    </ul>
+    <p>
+      Two pitfalls worth memorizing:
+    </p>
+    <ol>
+      <li>
+        Per-device mappings are <em>scoped</em>. A mapping listed as
+        <code>Remote-Firewall [root]</code> applies only to the root VDOM.
+        Other VDOMs on the same device inherit the base object &mdash; not
+        the override.
+      </li>
+      <li>
+        A normalized interface with no mapping for a given FortiGate
+        produces an install error like
+        <code>Dynamic interface "LAN" mapping undefined for device X</code>.
+        Fix by adding the per-device mapping (or a per-platform mapping
+        if the family already uses a consistent name).
+      </li>
+    </ol>
+  </section>
+
+  <section class="topic" id="global">
+    <h2>Global Database ADOM</h2>
+    <p>
+      The Global Database ADOM holds <strong>global policy packages</strong>,
+      <strong>global header policies</strong>, <strong>global footer
+      policies</strong>, and global objects that wrap around per-ADOM
+      policies. Once a global package is assigned to an ADOM, every policy
+      package within that ADOM inherits global header/footer rules
+      automatically.
+    </p>
+    <p>Useful properties to remember:</p>
+    <ul>
+      <li>Global packages can be scoped to <em>all</em> or <em>selected</em> policy packages within the target ADOM.</li>
+      <li>Editing global header/footer policies requires access to the Global Database ADOM &mdash; an admin scoped to a customer ADOM only cannot modify them.</li>
+      <li>If global ADOM objects are referenced inside a regular ADOM, you must upgrade the Global ADOM first when bumping ADOM versions.</li>
+    </ul>
+  </section>
+
+  <section class="topic" id="integrity">
+    <h2>Database Integrity &amp; Diagnose Commands</h2>
+    <p>FortiManager keeps several internal databases (CDB, DM, ADOMs, revisions). Two integrity rules I keep in mind:</p>
+    <ul>
+      <li>Always clear database integrity issues <em>before</em> running scripts &mdash; bad state plus mass changes is how you turn a small problem into a recovery exercise.</li>
+      <li>Skipping the supported upgrade path causes inconsistencies in the databases &mdash; follow the upgrade matrix even if a long jump &ldquo;works&rdquo; on the surface.</li>
+    </ul>
+    <p>Common diagnose commands:</p>
+    <pre><code>diagnose dvm device list                 # device manager: status of every device
+diagnose dvm check-integrity             # check device manager DB consistency
+diagnose cdb check adom-integrity        # check config DB / ADOM consistency
+diagnose test deploymanager reloadconf &lt;OID&gt;   # force re-pull of a device&rsquo;s config</code></pre>
+    <p>
+      <code>diagnose dvm device list</code> output to know:
+      <code>STATUS dev-db: not modified | modified</code>,
+      <code>conf: in sync | out of sync</code>,
+      <code>cond: pending | OK</code>,
+      <code>dm: installed | none</code>,
+      <code>conn: up | down | unknown</code>,
+      <code>template:[modified|installed]name</code>,
+      <code>pkg:[imported|never-installed]name</code>.
+      A <code>template:[modified]</code> flag means the next install will
+      let the system template overwrite the device-level DB for whatever
+      it covers.
+    </p>
+  </section>
+
+  <section class="topic" id="tokens">
+    <h2>FortiTokens &amp; Per-Device Object State</h2>
+    <p>
+      Some objects, like <strong>FortiTokens</strong>, are entitlements that
+      live on the FortiGate itself &mdash; not in the ADOM database.
+      FortiManager can <em>assign</em> a token to a user via a policy, but
+      the token serial must already exist in the target FortiGate&rsquo;s
+      local token list.
+    </p>
+    <p>
+      Failure pattern to recognize: an install fails with messages like
+      <code>FortiToken &lt;serial&gt; could not be found at device</code>
+      and <code>user local &lt;name&gt; could not be found at device</code>.
+      Fix by ensuring the token (and the local user it&rsquo;s assigned
+      to) exist on the device first &mdash; not via metadata variables, not
+      via meta fields.
+    </p>
+  </section>
+
+  <section class="topic" id="backup-mode">
+    <h2>Backup-Mode ADOMs</h2>
+    <p>
+      An ADOM in <strong>Backup mode</strong> is read-mostly: FortiManager
+      stores configuration backups for the devices in that ADOM, but does
+      not provide policy-package management for them. The Install Wizard
+      isn&rsquo;t the right path for changes there.
+    </p>
+    <p>
+      To apply a configuration change to a device in a backup-mode ADOM,
+      run a <strong>FortiManager script</strong> (CLI or Tcl) targeted at
+      the device. The script executes against the device or its device
+      database directly, bypassing the policy-package layer that backup
+      mode doesn&rsquo;t use.
+    </p>
+  </section>
+
+  <section class="topic" id="fmg-upgrade">
+    <h2>FortiManager Firmware vs ADOM Upgrades</h2>
+    <p>
+      Upgrading the FortiManager appliance and upgrading an ADOM are
+      <em>two separate operations</em>. New firmware on the box does not
+      automatically upgrade the existing ADOMs. Their database schema
+      stays at the prior version until you trigger the ADOM upgrade
+      manually under <strong>System Settings &rsaquo; ADOMs</strong>.
+    </p>
+    <p>Upgrade-order checklist that has saved me trouble:</p>
+    <ol>
+      <li>Install any pending changes; make sure devices and policy packages are synchronized.</li>
+      <li>Upgrade the managed FortiGates first (or accept that the ADOM upgrade may need a follow-up install).</li>
+      <li>If the Global ADOM is referenced, upgrade it before upgrading individual ADOMs that reference it.</li>
+      <li>Trim stale ADOM revisions if there are many &mdash; revisions add to the work an upgrade has to do.</li>
+      <li>After upgrade, check the Install Preview before the next push to catch any auto-introduced changes.</li>
+    </ol>
+  </section>
+
+  <section class="topic" id="both-nat">
+    <h2>Both Sides Behind NAT</h2>
+    <p>
+      The harder NAT case is when <em>both</em> FortiManager and FortiGate
+      sit behind NAT devices. For FGFM to work end-to-end:
+    </p>
+    <ul>
+      <li>FortiManager has <code>mgmt-addr</code> set to its public/NATed IP. That&rsquo;s the only address advertised to managed devices.</li>
+      <li>The NAT device in front of FortiGate has a VIP/port-forward so traffic to the FortiGate&rsquo;s public IP reaches the FortiGate&rsquo;s internal IP on TCP 541 (or 542 for IPv6).</li>
+      <li>FortiManager addresses the FortiGate by its public/NATed IP &mdash; it never sees the internal address.</li>
+    </ul>
+    <p>
+      Once it&rsquo;s up, if the FGFM tunnel is torn down, FortiManager
+      keeps trying to re-establish the tunnel using the FortiGate&rsquo;s
+      NATed IP. A common misconfiguration is putting the FortiManager
+      <em>internal</em> IP into the FortiGate&rsquo;s central-management
+      config &mdash; the FortiGate then can&rsquo;t reach FortiManager and
+      the tunnel never comes up.
     </p>
   </section>
 </main>
